@@ -9,6 +9,7 @@ contract Contest{
 		string party;
 		uint age;
 		string qualification;
+		string ipfs_hash;
 	}
 
 	struct Voter { 
@@ -22,6 +23,7 @@ contract Contest{
    // mapping(address => bool) public voters;
     mapping(address => Voter) public voters;
 	uint public contestantsCount;
+	string public winner;
 	// uint public counter;
 	enum PHASE{reg, voting , done}
 	PHASE public state;
@@ -47,9 +49,9 @@ contract Contest{
         state = x;
     }
 
-	function addContestant(string memory _name , string memory _party , uint _age , string memory _qualification) public onlyAdmin validState(PHASE.reg){
+	function addContestant(string memory _name , string memory _party , uint _age , string memory _qualification, string memory _ipfs_hash) public onlyAdmin validState(PHASE.reg){
 		contestantsCount++;
-		contestants[contestantsCount] = Contestant(contestantsCount,_name,0,_party,_age,_qualification);
+		contestants[contestantsCount] = Contestant(contestantsCount,_name,0,_party,_age,_qualification, _ipfs_hash);
 	}
 
 	function voterRegistration(address user) public onlyAdmin validState(PHASE.reg){
@@ -64,5 +66,16 @@ contract Contest{
 		contestants[_contestantId].voteCount++;
 		voters[msg.sender].hasVoted = true;
 		voters[msg.sender].vote = _contestantId;
+	}
+
+	function findWinner () public onlyAdmin validState(PHASE.done) {
+		uint max_count = 0;
+		uint i = 0;
+
+		for(i; i<contestantsCount; i++) {
+			if(contestants[i].voteCount > max_count) {
+				winner = contestants[i].name;
+			}
+		}
 	}
 }

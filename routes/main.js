@@ -15,7 +15,16 @@ router.get('/form', function(req, res, next) {
 });
 
 
-var getAge = require('get-age');
+function getAge(dateString) {
+
+  var today = new Date();
+  var birthDate = new Date(Number(dateString));
+
+  var age = today.getUTCFullYear() - birthDate.getUTCFullYear()
+  return age;
+}
+
+
 
 
 var nodemailer = require('nodemailer');
@@ -37,7 +46,7 @@ var data;
 // app.use(express.urlencoded());
 
 router.post('/registerdata',function(req,res){
-    var dob=[];
+    var dob = '';
     data=req.body.aadharno;    //data stores aadhar no
     account_address=req.body.account_address;     //stores metamask acc address
     //console.log(data);
@@ -46,14 +55,18 @@ router.post('/registerdata',function(req,res){
         if (error) {
           return console.error(error.message);
         }
-        console.log(results);
         if(results.length == 0) {
           res.send('Invalid Aadhar Number!!!');
           return;
         }
+
+        
+
         dob = results[0].Dob;
+
         var email=results[0].Email;
         age = getAge(dob);
+
         is_registerd=results[0].Is_registered;
 
         
@@ -75,7 +88,8 @@ router.post('/registerdata',function(req,res){
                   console.log('Email sent: ' + info.response);
                 }
               });
-            res.render('emailverify.ejs');
+            // res.render('emailverify.ejs');
+            registerUser(res);    
           }
           else
           {
@@ -120,7 +134,7 @@ router.post('/otpverify', (req, res) => {
                     console.log("1 record updated");
                     var msg = "You are successfully registered";
                     // res.send('You are successfully registered');
-                    res.render('voter-registration.ejs',{alertMsg:msg});                 
+                    res.render('voter-registration.ejs',{alertMsg:msg});    
                   }
                 }); 
                
@@ -133,6 +147,34 @@ router.post('/otpverify', (req, res) => {
     }
 })
 
+const registerUser = (res) => {
+  var record= { Account_address: account_address, Is_registered : 'Yes' };
+        var sql="INSERT INTO registered_users SET ?";
+        conn.query(sql,record, function(err2,res2)
+          {
+             if (err2){
+             throw err2;
+            }
+              else{
+                var sql1="Update aadhar_info set Is_registered=? Where Aadharno=?";
+                var record1=['YES',data]
+                console.log(data)
+                conn.query(sql1,record1, function(err1,res1)
+                {
+                   if (err1) {
+                    res.render('voter-registration.ejs');
+                   }
+                   else{
+                    console.log("1 record updated");
+                    var msg = "You are successfully registered";
+                    // res.send('You are successfully registered');
+                    res.render('voter-registration.ejs',{alertMsg:msg});    
+                  }
+                }); 
+               
+              }
+          }); 
+}
 
 
 // router.get('/register',function(req,res){

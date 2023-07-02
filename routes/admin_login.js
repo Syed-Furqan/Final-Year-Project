@@ -30,4 +30,3 @@ router.post('/adlogin', function(req, res){
 })
 
 module.exports = router;
-

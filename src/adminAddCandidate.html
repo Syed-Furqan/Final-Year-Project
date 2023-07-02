@@ -118,6 +118,15 @@
                           </div>
                         </div>
                       </div>
+
+                      <div class="row mb-4">
+                        <div class="col">
+                          <div style="width: 200px; height: 200px">
+                            <img src="" id="profile_pic" style="width: 100%; height: 100%;"/>
+                          </div>
+                          <input type="file" id="image_input" accept="image/png, image/jpg"/>
+                        </div>
+                      </div>
                      
                       <!-- Submit button -->
                       <button type="submit"  class="btn btn-success btn-block mb-4">Add</button>
@@ -177,6 +186,7 @@
 <script>
   $(document).ready(function() {
     $().ready(function() {
+
       $sidebar = $('.sidebar');
 
       $sidebar_img_container = $sidebar.find('.sidebar-background');

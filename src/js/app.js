@@ -1,4 +1,40 @@
 var phaseEnum; // for changing phases of voting
+var electionWinner = "";
+
+ipfsUrl = "https://ipfs.io/ipfs/";
+
+function ipfsClient() {
+  const ipfs = {
+          host: "ipfs.infura.io",
+          port: 5001,
+          protocol: "https"
+      }
+  return ipfs;
+}
+
+function upload() {
+  let ipfs = ipfsClient();
+
+  let img_ipt = document.getElementById("image_input");
+
+  ipfsAdd(img_ipt.files[0], (err, hash) => {
+    return hash;
+  });
+}
+
+
+// Fall Back...
+let profilePic = document.getElementById("profile_pic");
+let image_input = document.getElementById("image_input");
+var src = "";
+
+if(image_input) {
+  image_input.onchange = function() {
+    src = "../assets/img/faces/"+image_input.files[0].name;
+    profilePic.src = URL.createObjectURL(image_input.files[0]);
+  }
+}
+
 App = {
   web3Provider: null,
   contracts: {},
@@ -53,7 +89,8 @@ App = {
       }
     });
 
-    
+    var contestantsResults=$("#test");
+
 
     // ------------- fetching candidates to front end from blockchain code-------------
     App.contracts.Contest.deployed().then(function(instance){
@@ -81,7 +118,7 @@ App = {
       //     var contestantOption="<option value='"+id+"'>"+name+"</option>";
       //     contestantSelect.append(contestantOption);
 
-      var contestantsResults=$("#test");
+      // var contestantsResults=$("#test");
       contestantsResults.empty();
       var contestantsResultsAdmin=$("#contestantsResultsAdmin");
       contestantsResultsAdmin.empty();
@@ -96,9 +133,12 @@ App = {
           var voteCount=contestant[2];
           var fetchedParty=contestant[3];
           var fetchedAge = contestant[4];
-          var fetchedQualification = contestant[5]
+          var fetchedQualification = contestant[5];
+          var ipfsHash = contestant[6];
 
-          var contestantTemplate="<div class='card' style='width: 15rem; margin: 1rem;'><img class='card-img-top'src='../img/Sample_User_Icon.png' alt=''><div class='card-body text-center'><h4 class='card-title'>" 
+          ipfsUrl = ipfsUrl + ipfsHash;
+
+          var contestantTemplate="<div class='card' style='width: 15rem; margin: 1rem;'><img style='width: 100%' class='card-img-top' src="+ipfsHash+" alt=''><div class='card-body text-center'><h4 class='card-title'>" 
           + name + "</h4>"+
           "<button type='button' class='btn btn-info' data-toggle='modal' data-target='#modal"+id+"'>Click Here to Vote</button>" 
           + "<div class='modal fade' id='modal"+id+"' tabindex='-1' role='dialog' aria-labelledby='exampleModalCenterTitle' aria-hidden='true'>"
@@ -113,13 +153,14 @@ App = {
           + "<button class='btn btn-info' onClick='App.castVote("+id.toString()+")'>VOTE</button>"
           +"<button type='button' class='btn btn-info' data-dismiss='modal'>Close</button></div>"
           + "</div></div></div>"
+          + "<div></div>"
           + "</div></div>";
           contestantsResults.append(contestantTemplate)  ;
 
           var contestantOption="<option style='padding: auto;' value='"+id+"'>"+name+"</option>";
           contestantSelect.append(contestantOption);
 
-          var contestantTemplateAdmin="<tr><th>"+id+"</th><td>"+name+"</td><td>"+fetchedAge+"</td><td>"+fetchedParty+"</td><td>"+fetchedQualification+"</td><td>"+voteCount+"</td></tr>";
+          var contestantTemplateAdmin="<tr><th>"+id+"</th><td><img style='width:50px; height: 50px' src="+ipfsHash+"></td><td>"+name+"</td><td>"+fetchedAge+"</td><td>"+fetchedParty+"</td><td>"+fetchedQualification+"</td><td>"+voteCount+"</td></tr>";
           contestantsResultsAdmin.append(contestantTemplateAdmin)  ;
         }); 
       }
@@ -139,12 +180,15 @@ App = {
       if(state == 0){
         fetchedState = "Registration phase is on , go register yourself to vote !!";
         fetchedStateAdmin = "Registration";
+        contestantsResults.hide();
       }else if(state == 1){
         fetchedState = "Voting is now live !!!";
         fetchedStateAdmin = "Voting";
+        contestantsResults.show();
       }else {
         fetchedState = "Voting is now over !!!";
         fetchedStateAdmin = "Election over";
+        contestantsResults.hide();
       }
       
       var currentPhase = $("#currentPhase");//for user
@@ -160,15 +204,23 @@ App = {
     })
 
     // ------------- showing result -------------
+
     App.contracts.Contest.deployed().then(function (instance){
       return instance.state();
     }).then(function(state){
       var result = $('#Results');
+      var winnerChart = $('#winner-chart');
+
+      colors = ["", "red", "blue", "green", "yellow", "orange"];
+
       if(state == 2){
         $("#not").hide();
+       
         contestInstance.contestantsCount().then(function(contestantsCount){
+
           for(var i=1; i<=contestantsCount; i++){
             contestInstance.contestants(i).then(function(contestant){
+
               var id=contestant[0];
               var name=contestant[1];
               var voteCount=contestant[2];
@@ -177,8 +229,14 @@ App = {
               var fetchedQualification = contestant[5];
 
               var resultTemplate="<tr><th>"+id+"</th><td>"+name+"</td><td>"+fetchedAge+"</td><td>"+fetchedParty+"</td><td>"+fetchedQualification+"</td><td>"+voteCount+"</td></tr>";
-              result.append(resultTemplate)  ;
+              result.append(resultTemplate);
+
+              let height = voteCount*100;
+              winnerChart.append("<div style='display: flex; flex-direction: column; align-items: center; margin-right: 10px'><div style='width: 25px; height: "+height+"px; background-color:"+colors[id]+";'></div><div style='font-weight: bold'>"+name+"</div></div></div>");
+
             });
+
+            
           }
         })
          
@@ -188,6 +246,7 @@ App = {
     }).catch(function(err){
       console.error(err);
     })
+
   },
 
   
@@ -210,6 +269,9 @@ App = {
 
   // ------------- adding candidate code -------------
   addCandidate: function(){
+
+    upload();
+
     $("#loader").hide();
     var name=$('#name').val();
     var age = $('#age').val();
@@ -217,20 +279,22 @@ App = {
     var qualification = $('#qualification').val();
     
     App.contracts.Contest.deployed().then(function(instance){
-      return instance.addContestant(name,party,age,qualification);
+      return instance.addContestant(name,party,age,qualification,src);
     }).then(function(result){
       $("#loader").show();
       $('#name').val('');
       $('#age').val('');
       $('#party').val('');
       $('#qualification').val('');
+      profilePic.src = "";
+      console.log('QmTNePx33aBjwHtTcBxqXpWdt3XNeZEuhWkwkb3WnDaiWy');
     }).catch(function(err){
       console.error(err);
     })
   },
 
   // ------------- changing phase code -------------
-  
+
   changeState: function(){
     phaseEnum ++;
     // console.log(phaseEnum);
@@ -244,11 +308,23 @@ App = {
     })
   },
 
-  // ------------- registering voter code -------------
+  findWinner: function() {
+    App.contracts.Contest.deployed().then(function(instance){
+      return instance.winner()
+    }).then(function(winner) {
+      electionWinner = winner;
+      $('winner-container').append(electionWinner);
+      console.log(electionWinner);
+    }).catch(function(err) {
+      console.error(err);
+    })
+  },
+
+  // ------------- Registering voter code -------------
   registerVoter: function(){
     var add=$('#accadd').val();
     App.contracts.Contest.deployed().then(function(instance){
-      return instance.voterRegisteration(add);
+      return instance.voterRegistration(add);
     }).then(function(result){
       $("#content").hide();
       $("#loader").show();
@@ -259,6 +335,9 @@ App = {
 
 };
 
+function ipfsAdd(data, func) {
+  return "xyz";
+}
 
 $(function() {
   $(window).load(function() {
